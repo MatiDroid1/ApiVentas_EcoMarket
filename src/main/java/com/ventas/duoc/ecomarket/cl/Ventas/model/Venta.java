@@ -24,4 +24,11 @@ public class Venta {
     private String metodoPago;
     private String estado;
     private LocalDate fechaVenta;
+
+    @Column(name = "cupon_codigo")
+    private String cuponCodigo;
+
+    @Column(name = "descuento_aplicado")
+    private Double descuentoAplicado;
+
 }

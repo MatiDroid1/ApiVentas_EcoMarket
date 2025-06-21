@@ -12,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 import com.ventas.duoc.ecomarket.cl.Ventas.dto.PedidoDTO;
 import com.ventas.duoc.ecomarket.cl.Ventas.dto.UsuarioDTO;
 import com.ventas.duoc.ecomarket.cl.Ventas.dto.VentaDetalleDTO;
+import com.ventas.duoc.ecomarket.cl.Ventas.model.Cupon;
 import com.ventas.duoc.ecomarket.cl.Ventas.model.Venta;
 import com.ventas.duoc.ecomarket.cl.Ventas.repository.VentaRepository;
 
@@ -96,8 +97,55 @@ public class VentaService {
         return repo.findById(id).orElse(null);
     }
 
+    /*
     public Venta guardar(Venta v) {
         v.setFechaVenta(LocalDate.now());
         return repo.save(v);
     }
+    */
+
+    @Autowired
+private CuponService cuponService;
+
+public Venta guardar(Venta v, String cuponCodigo) {
+    v.setFechaVenta(LocalDate.now());
+
+    try {
+        PedidoDTO pedido = restTemplate.exchange(
+            urlPedidos + "/" + v.getPedidoId(),
+            HttpMethod.GET,
+            new HttpEntity<>(createHeaders(apiKeyPedidos)),
+            PedidoDTO.class).getBody();
+
+        if (pedido != null) {
+            double totalPedido = pedido.getTotal();
+            double descuento = 0.0;
+
+            if (cuponCodigo != null && !cuponCodigo.isBlank()) {
+                Cupon cupon = cuponService.validarCupon(cuponCodigo);
+
+                if (cupon != null) {
+                    if ("porcentaje".equalsIgnoreCase(cupon.getTipo())) {
+                        descuento = totalPedido * (cupon.getDescuento() / 100);
+                    } else if ("monto".equalsIgnoreCase(cupon.getTipo())) {
+                        descuento = cupon.getDescuento();
+                    }
+
+                    v.setCuponCodigo(cupon.getCodigo());
+                    v.setDescuentoAplicado(descuento);
+                }
+            }
+
+            v.setTotal(Math.max(0, totalPedido - descuento));
+        } else {
+            v.setTotal(0.0);
+        }
+    } catch (Exception e) {
+        v.setTotal(0.0);
+    }
+
+    return repo.save(v);
+}
+
+
 }

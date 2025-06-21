@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ventas.duoc.ecomarket.cl.Ventas.dto.VentaDetalleDTO;
+import com.ventas.duoc.ecomarket.cl.Ventas.dto.VentaRequestDTO;
 import com.ventas.duoc.ecomarket.cl.Ventas.model.Venta;
 import com.ventas.duoc.ecomarket.cl.Ventas.service.VentaService;
 
@@ -43,10 +44,20 @@ public class VentaController {
         return venta != null ? ResponseEntity.ok(venta) : ResponseEntity.notFound().build();
     }
 
-    @PostMapping
-    @Operation(summary = "crear venta")
-public ResponseEntity<?> crear(@RequestBody Venta venta) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(service.guardar(venta));
+@PostMapping
+@Operation(summary = "Crear venta con o sin cupón")
+public ResponseEntity<?> crear(@RequestBody VentaRequestDTO request) {
+    if (request.getPedidoId() == null || request.getMetodoPago() == null || request.getEstado() == null) {
+        return ResponseEntity.badRequest().body("Faltan campos obligatorios");
+    }
+
+    Venta venta = new Venta();
+    venta.setPedidoId(request.getPedidoId());
+    venta.setMetodoPago(request.getMetodoPago());
+    venta.setEstado(request.getEstado());
+
+    return ResponseEntity.status(HttpStatus.CREATED)
+                         .body(service.guardar(venta, request.getCuponCodigo()));
 }
 
 
